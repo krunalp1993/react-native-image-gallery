@@ -97,8 +97,8 @@ export default class ViewTransformer extends React.Component {
 
     componentWillMount () {
         this.gestureResponder = createResponder({
-            onStartShouldSetResponder: (evt, gestureState) => true,
-            onMoveShouldSetResponderCapture: (evt, gestureState) => true,
+            onStartShouldSetResponder: (evt, gestureState) => false,
+            onMoveShouldSetResponderCapture: (evt, gestureState) => this.shouldGalleryGestureRespond(evt),
             // onMoveShouldSetResponder: this.handleMove,
             onResponderMove: this.onResponderMove,
             onResponderGrant: this.onResponderGrant,
@@ -121,6 +121,22 @@ export default class ViewTransformer extends React.Component {
 
     componentWillUnmount () {
         this.cancelAnimation();
+    }
+
+    shouldGalleryGestureRespond = (evt) => {
+        const { resizeCmpIds, currentPage } = this.props;
+        console.log('View Transformer ==>  ===> ', evt.target, resizeCmpIds, currentPage, resizeCmpIds[this.currentPage + 1]);
+
+        const currentPageObjs = resizeCmpIds[currentPage + 1];
+        if (!resizeCmpIds || !currentPageObjs) return true;
+        let isGalleryGesture = true;
+        currentPageObjs.map((nodeId) => {
+            if (resizeCmpIds && (nodeId - evt.target <= 8)) {
+                isGalleryGesture = false;
+            }
+        });
+        console.log('View Transformer ===> REsult ==> ', isGalleryGesture);
+        return isGalleryGesture;
     }
 
     render () {
@@ -171,13 +187,13 @@ export default class ViewTransformer extends React.Component {
         });
     }
 
-    onResponderGrant (evt, gestureState) {
+    onResponderGrant = (evt, gestureState) => {
         this.props.onTransformStart && this.props.onTransformStart();
         this.setState({responderGranted: true});
         this.measureLayout();
     }
 
-    onResponderMove (evt, gestureState) {
+    onResponderMove = (evt, gestureState) => {
         this.cancelAnimation();
 
         let dx = gestureState.moveX - gestureState.previousMoveX;
@@ -220,7 +236,7 @@ export default class ViewTransformer extends React.Component {
         return true;
     }
 
-    onResponderRelease (evt, gestureState) {
+    onResponderRelease = (evt, gestureState) => {
         let handled = this.props.onTransformGestureReleased && this.props.onTransformGestureReleased({
             scale: this.state.scale,
             translateX: this.state.translateX,
@@ -255,7 +271,7 @@ export default class ViewTransformer extends React.Component {
         }
     }
 
-    performFling (vx, vy) {
+    performFling = (vx, vy) => {
         let startX = 0;
         let startY = 0;
         let maxX, minX, maxY, minY;

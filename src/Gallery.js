@@ -1,6 +1,7 @@
 import React, { PureComponent } from 'react';
 import { View, ViewPropTypes } from 'react-native';
 import PropTypes from 'prop-types';
+import _ from 'lodash';
 import { createResponder } from './libraries/GestureResponder';
 import TransformableImage from './libraries/TransformableImage';
 import ViewPager from './libraries/ViewPager';
@@ -73,9 +74,19 @@ export default class Gallery extends PureComponent {
         };
 
         this.gestureResponder = createResponder({
-            onStartShouldSetResponderCapture: (evt, gestureState) => true,
-            onStartShouldSetResponder: (evt, gestureState) => true,
+            // onStartShouldSetResponderCapture: (evt, gestureState) => true,
+            onStartShouldSetResponderCapture: (evt, gestureState) => {
+                return this.shouldGalleryGestureRespond(evt);
+            },
+            onStartShouldSetResponder: (evt, gestureState) => (evt, gestureState) => {
+                const { dragResizeCmpId } = this.props;
+                console.log('onStartShouldSetResponder ===> ', evt.target, dragResizeCmpId);
+                return !dragResizeCmpId || (dragResizeCmpId - evt.target > 10);
+            },
             onResponderGrant: this.activeImageResponder,
+            onMoveShouldSetPanResponderCapture: (evt, gestureState) => {
+                return this.shouldGalleryGestureRespond(evt);
+            },
             onResponderMove: (evt, gestureState) => {
                 if (this.firstMove) {
                     this.firstMove = false;
@@ -107,7 +118,16 @@ export default class Gallery extends PureComponent {
             onResponderTerminate: onResponderReleaseOrTerminate,
             onResponderTerminationRequest: (evt, gestureState) => false, // Do not allow parent view to intercept gesture
             onResponderSingleTapConfirmed: (evt, gestureState) => {
-                this.props.onSingleTapConfirmed && this.props.onSingleTapConfirmed(this.currentPage);
+                console.log(' On tap con ===> ', evt.nativeEvent, gestureState);
+                if (
+                    _.has(gestureState, 'x0') &&
+                    _.has(gestureState, 'y0')
+                ) {
+                    console.log(gestureState);       
+                    const x = gestureState.x0;
+                    const y = gestureState.y0;
+                    this.props.onSingleTapConfirmed && this.props.onSingleTapConfirmed(this.currentPage, { x, y });
+                }
             }
         });
 
@@ -154,7 +174,23 @@ export default class Gallery extends PureComponent {
         this._isMounted = false;
     }
 
-    shouldScrollViewPager (evt, gestureState) {
+    shouldGalleryGestureRespond = (evt) => {
+        const { resizeCmpIds } = this.props;
+        console.log('onStartShouldSetResponderCapture ===> ', evt.target, resizeCmpIds);
+
+        const currentPageObjs = resizeCmpIds[this.currentPage + 1];
+        if (!resizeCmpIds || !currentPageObjs) return true;
+        let isGalleryGesture = true;
+        currentPageObjs.map((nodeId) => {
+            if (resizeCmpIds && (nodeId - evt.target <= 8)) {
+                isGalleryGesture = false;
+            }
+        });
+        console.log('onStartShouldSetResponderCapture ===> REsult ==> ', isGalleryGesture);
+        return isGalleryGesture;
+    }
+
+    shouldScrollViewPager = (evt, gestureState) => {
         if (gestureState.numberActiveTouches > 1) {
             return false;
         }
@@ -175,7 +211,7 @@ export default class Gallery extends PureComponent {
         return false;
     }
 
-    activeImageResponder (evt, gestureState) {
+    activeImageResponder = (evt, gestureState) => {
         if (this.activeResponder !== this.imageResponder) {
             if (this.activeResponder === this.viewPagerResponder) {
                 this.viewPagerResponder.onEnd(evt, gestureState, true); // pass true to disable ViewPager settle
@@ -185,7 +221,7 @@ export default class Gallery extends PureComponent {
         }
     }
 
-    activeViewPagerResponder (evt, gestureState) {
+    activeViewPagerResponder = (evt, gestureState) => {
         if (this.activeResponder !== this.viewPagerResponder) {
             if (this.activeResponder === this.imageResponder) {
                 this.imageResponder.onEnd(evt, gestureState);
@@ -195,7 +231,7 @@ export default class Gallery extends PureComponent {
         }
     }
 
-    getImageTransformer (page) {
+    getImageTransformer = (page) => {
         if (page >= 0 && page < this.pageCount) {
             let ref = this.imageRefs.get(page);
             if (ref) {
@@ -204,20 +240,20 @@ export default class Gallery extends PureComponent {
         }
     }
 
-    getCurrentImageTransformer () {
+    getCurrentImageTransformer = () => {
         return this.getImageTransformer(this.currentPage);
     }
 
-    getViewPagerInstance () {
+    getViewPagerInstance = () => {
         return this.refs['galleryViewPager'];
     }
 
-    onPageSelected (page) {
+    onPageSelected = (page) => {
         this.currentPage = page;
         this.props.onPageSelected && this.props.onPageSelected(page);
     }
 
-    onPageScrollStateChanged (state) {
+    onPageScrollStateChanged = (state) => {
         if (state === 'idle') {
             this.resetHistoryImageTransform();
         }
@@ -225,7 +261,7 @@ export default class Gallery extends PureComponent {
     }
 
     renderPage (pageData, pageId) {
-        const { onViewTransformed, onTransformGestureReleased, errorComponent, imageComponent } = this.props;
+        const { onViewTransformed, onTransformGestureReleased, errorComponent, imageComponent, resizeCmpIds } = this.props;
         return (
             <TransformableImage
               onViewTransformed={((transform) => {
@@ -240,11 +276,13 @@ export default class Gallery extends PureComponent {
               errorComponent={errorComponent}
               imageComponent={imageComponent}
               image={pageData}
+              resizeCmpIds={resizeCmpIds}
+              currentPage={this.currentPage}
             />
         );
     }
 
-    resetHistoryImageTransform () {
+    resetHistoryImageTransform = () => {
         let transformer = this.getImageTransformer(this.currentPage + 1);
         if (transformer) {
             transformer.forceUpdateTransform({scale: 1, translateX: 0, translateY: 0});
@@ -265,9 +303,11 @@ export default class Gallery extends PureComponent {
         }
         this.pageCount = images.length;
 
-        if (this.pageCount <= 0) {
+        if (this.props.disableImageGesture === true || this.pageCount <= 0) {
             gestureResponder = {};
         }
+
+        console.log('On Redner Gallery ===> ', this.props.disableImageGesture);
 
         const flatListProps = {...DEFAULT_FLAT_LIST_PROPS, ...this.props.flatListProps};
 

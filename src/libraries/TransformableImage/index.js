@@ -142,7 +142,7 @@ export default class TransformableImage extends PureComponent {
 
     render () {
         const { imageDimensions, viewWidth, viewHeight, error, keyAccumulator, imageLoaded } = this.state;
-        const { style, image, imageComponent, resizeMode, enableTransform, enableScale, enableTranslate, onTransformGestureReleased, onViewTransformed } = this.props;
+        const { style, image, imageComponent, resizeMode, enableTransform, enableScale, enableTranslate, onTransformGestureReleased, onViewTransformed, resizeCmpIds, currentPage } = this.props;
 
         let maxScale = 1;
         let contentAspectRatio;
@@ -176,6 +176,8 @@ export default class TransformableImage extends PureComponent {
 
         return (
             <ViewTransformer
+                resizeCmpIds={resizeCmpIds}
+                currentPage={currentPage}
               ref={'viewTransformer'}
               key={'viewTransformer#' + keyAccumulator} // when image source changes, we should use a different node to avoid reusing previous transform state
               enableTransform={enableTransform && imageLoaded} // disable transform until image is loaded
