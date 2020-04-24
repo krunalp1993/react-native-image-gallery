@@ -76,6 +76,8 @@ export default class Gallery extends PureComponent {
         this.gestureResponder = createResponder({
             // onStartShouldSetResponderCapture: (evt, gestureState) => true,
             onStartShouldSetResponderCapture: (evt, gestureState) => {
+                this.cmpEventTarget = evt.target;
+                console.log('Check before continue ==> ', evt.target);
                 return this.shouldGalleryGestureRespond(evt);
             },
             onStartShouldSetResponder: (evt, gestureState) => (evt, gestureState) => {
@@ -85,6 +87,7 @@ export default class Gallery extends PureComponent {
             },
             onResponderGrant: this.activeImageResponder,
             onMoveShouldSetPanResponderCapture: (evt, gestureState) => {
+                console.log('Check before continue1 ==> ', evt.target);
                 return this.shouldGalleryGestureRespond(evt);
             },
             onResponderMove: (evt, gestureState) => {
@@ -118,12 +121,13 @@ export default class Gallery extends PureComponent {
             onResponderTerminate: onResponderReleaseOrTerminate,
             onResponderTerminationRequest: (evt, gestureState) => false, // Do not allow parent view to intercept gesture
             onResponderSingleTapConfirmed: (evt, gestureState) => {
-                console.log(' On tap con ===> ', evt.nativeEvent, gestureState);
+                console.log('Check before continue2 ==> ', evt.nativeEvent, gestureState);
                 if (
+                    this.shouldGalleryGestureRespond(evt) &&
                     _.has(gestureState, 'x0') &&
                     _.has(gestureState, 'y0')
-                ) {
-                    console.log(gestureState);       
+                    ) {
+                    console.log(' On tap con ===> ', evt.nativeEvent, gestureState);    
                     const x = gestureState.x0;
                     const y = gestureState.y0;
                     this.props.onSingleTapConfirmed && this.props.onSingleTapConfirmed(this.currentPage, { x, y });
@@ -175,14 +179,14 @@ export default class Gallery extends PureComponent {
     }
 
     shouldGalleryGestureRespond = (evt) => {
-        const { resizeCmpIds } = this.props;
-        console.log('onStartShouldSetResponderCapture ===> ', evt.target, resizeCmpIds);
+        const { resizeCmpIds, maxDistance } = this.props;
+        console.log('Gallary ==> onStartShouldSetResponderCapture ===> ', evt.target, resizeCmpIds, this.cmpEventTarget);
 
         const currentPageObjs = resizeCmpIds[this.currentPage + 1];
         if (!resizeCmpIds || !currentPageObjs) return true;
         let isGalleryGesture = true;
         currentPageObjs.map((nodeId) => {
-            if (resizeCmpIds && (nodeId - evt.target <= 8)) {
+            if (resizeCmpIds && (nodeId - this.cmpEventTarget <= maxDistance)) {
                 isGalleryGesture = false;
             }
         });
@@ -261,7 +265,7 @@ export default class Gallery extends PureComponent {
     }
 
     renderPage (pageData, pageId) {
-        const { onViewTransformed, onTransformGestureReleased, errorComponent, imageComponent, resizeCmpIds } = this.props;
+        const { onViewTransformed, onTransformGestureReleased, errorComponent, imageComponent, resizeCmpIds, maxDistance } = this.props;
         return (
             <TransformableImage
               onViewTransformed={((transform) => {
@@ -277,6 +281,7 @@ export default class Gallery extends PureComponent {
               imageComponent={imageComponent}
               image={pageData}
               resizeCmpIds={resizeCmpIds}
+              maxDistance={maxDistance}
               currentPage={this.currentPage}
             />
         );

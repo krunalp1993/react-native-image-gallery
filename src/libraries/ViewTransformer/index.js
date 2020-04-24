@@ -124,18 +124,18 @@ export default class ViewTransformer extends React.Component {
     }
 
     shouldGalleryGestureRespond = (evt) => {
-        const { resizeCmpIds, currentPage } = this.props;
-        console.log('View Transformer ==>  ===> ', evt.target, resizeCmpIds, currentPage, resizeCmpIds[this.currentPage + 1]);
+        const { resizeCmpIds, currentPage, maxDistance } = this.props;
+        // console.log('View Transformer ==>  ===> ', evt.target, resizeCmpIds, currentPage, resizeCmpIds[this.currentPage + 1]);
 
         const currentPageObjs = resizeCmpIds[currentPage + 1];
         if (!resizeCmpIds || !currentPageObjs) return true;
         let isGalleryGesture = true;
         currentPageObjs.map((nodeId) => {
-            if (resizeCmpIds && (nodeId - evt.target <= 8)) {
+            if (resizeCmpIds && (nodeId - evt.target <= maxDistance)) {
                 isGalleryGesture = false;
             }
         });
-        console.log('View Transformer ===> REsult ==> ', isGalleryGesture);
+        // console.log('View Transformer ===> REsult ==> ', isGalleryGesture);
         return isGalleryGesture;
     }
 
